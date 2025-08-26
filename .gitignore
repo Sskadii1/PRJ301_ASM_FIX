@@ -1,0 +1,21 @@
+# Compiled class file
+*.class
+
+# Package Files #
+*.jar
+*.war
+*.ear
+
+# NetBeans project directory
+nbproject/private/
+build/
+nbbuild/
+dist/
+nbdist/
+.nb-gradle/
+
+# Mac OS & Windows folder attributes
+.DS_Store
+Thumbs.db
+# Secret files
+client_secret.json
