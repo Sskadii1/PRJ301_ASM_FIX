@@ -32,9 +32,11 @@ public class CSPFilter implements Filter {
                           "https://use.fontawesome.com " +
                           "https://mdbootstrap.com " +
                           "https://fonts.googleapis.com " +
+                          "https://fonts.gstatic.com " +
                           "https://cdn.tailwindcss.com " +
                           "https://bizweb.dktcdn.net " +
-                          "https://hstatic.net; " +
+                          "https://hstatic.net " +
+                          "https://dl.dropbox.com; " +
                           "script-src 'self' 'unsafe-inline' 'unsafe-eval' " +
                           "https://stackpath.bootstrapcdn.com " +
                           "https://cdnjs.cloudflare.com " +
@@ -49,7 +51,9 @@ public class CSPFilter implements Filter {
                           "https://maxcdn.bootstrapcdn.com " +
                           "https://use.fontawesome.com " +
                           "https://hstatic.net; " +
-                          "img-src 'self' data: https:; " +
+                          "img-src 'self' data: https: " +
+                          "https://dl.dropbox.com " +
+                          "https://bizweb.dktcdn.net; " +
                           "connect-src 'self'; " +
                           "frame-src 'self';";
         
