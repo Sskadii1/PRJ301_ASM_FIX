@@ -55,7 +55,7 @@ public class InvoiceServlet extends HttpServlet {
                 sumAllInvoice = dao.sumAllMoneyOrder();
                 listAllInvoice = dao.getAll();
             } catch (Exception e2) {
-                System.err.println("Error calling DAO methods: " + e2.getMessage());
+                // Log error properly - could use logger here
                 e2.printStackTrace();
                 // Set default values
                 sumAllInvoice = 0.0;

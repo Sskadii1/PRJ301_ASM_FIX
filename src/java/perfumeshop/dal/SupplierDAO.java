@@ -35,7 +35,8 @@ public class SupplierDAO extends DBContext {
                 list.add(s);
             }
         } catch (SQLException e) {
-            System.out.println(e);
+            // Log error properly - could use logger here
+            e.printStackTrace();
         }
 
         return list;
@@ -59,7 +60,8 @@ public class SupplierDAO extends DBContext {
                 list.add(s);
             }
         } catch (SQLException e) {
-            System.out.println(e);
+            // Log error properly - could use logger here
+            e.printStackTrace();
         }
 
         return list;
@@ -84,7 +86,8 @@ public class SupplierDAO extends DBContext {
                 return s;
             }
         } catch (SQLException e) {
-            System.out.println(e);
+            // Log error properly - could use logger here
+            e.printStackTrace();
         }
         return null;
     }
@@ -108,7 +111,8 @@ public class SupplierDAO extends DBContext {
             st.setString(5, c.getHomepage());
             st.executeUpdate();
         } catch (SQLException e) {
-            System.out.println(e);
+            // Log error properly - could use logger here
+            e.printStackTrace();
         }
     }
 
@@ -128,7 +132,8 @@ public class SupplierDAO extends DBContext {
         List<Supplier> list = p.getAll();
 
         for (Supplier supplier : list) {
-            System.out.println(supplier.getCompanyName());
+            // Debug output - could use logger here
+            // System.out.println(supplier.getCompanyName());
         }
     }
 

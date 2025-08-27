@@ -35,7 +35,8 @@ public class CategoryDAO extends DBContext {
                 list.add(c);
             }
         } catch (SQLException e) {
-            System.out.println(e);
+            // Log error properly - could use logger here
+            e.printStackTrace();
         }
 
         return list;
@@ -60,7 +61,8 @@ public class CategoryDAO extends DBContext {
                 return c;
             }
         } catch (SQLException e) {
-            System.out.println(e);
+            // Log error properly - could use logger here
+            e.printStackTrace();
         }
         return null;
     }

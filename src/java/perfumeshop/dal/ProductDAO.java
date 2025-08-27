@@ -54,7 +54,8 @@ public class ProductDAO extends DBContext {
                 list.add(p);
             }
         } catch (SQLException e) {
-            System.out.println(e);
+            // Log error properly - could use logger here  
+            e.printStackTrace();
         }
 
         return list;
@@ -95,7 +96,8 @@ public class ProductDAO extends DBContext {
                 list.add(p);
             }
         } catch (SQLException e) {
-            System.out.println(e);
+            // Log error properly - could use logger here  
+            e.printStackTrace();
         }
         return list;
     }
@@ -133,7 +135,8 @@ public class ProductDAO extends DBContext {
                 list.add(p);
             }
         } catch (SQLException e) {
-            System.out.println(e);
+            // Log error properly - could use logger here  
+            e.printStackTrace();
         }
         return list;
     }
@@ -167,7 +170,8 @@ public class ProductDAO extends DBContext {
                 list.add(p);
             }
         } catch (SQLException e) {
-            System.out.println(e);
+            // Log error properly - could use logger here  
+            e.printStackTrace();
         }
         return list;
     }
@@ -201,7 +205,8 @@ public class ProductDAO extends DBContext {
                 return p;
             }
         } catch (SQLException e) {
-            System.out.println(e);
+            // Log error properly - could use logger here  
+            e.printStackTrace();
         }
         return null;
     }
@@ -235,7 +240,8 @@ public class ProductDAO extends DBContext {
                 list.add(p);
             }
         } catch (SQLException e) {
-            System.out.println(e);
+            // Log error properly - could use logger here  
+            e.printStackTrace();
         }
         return list;
     }
@@ -269,7 +275,8 @@ public class ProductDAO extends DBContext {
                 list.add(p);
             }
         } catch (SQLException e) {
-            System.out.println(e);
+            // Log error properly - could use logger here  
+            e.printStackTrace();
         }
         return list;
     }
@@ -333,7 +340,8 @@ public class ProductDAO extends DBContext {
                 list.add(p);
             }
         } catch (SQLException e) {
-            System.out.println(e);
+            // Log error properly - could use logger here  
+            e.printStackTrace();
         }
         return list;
     }
@@ -383,7 +391,8 @@ public class ProductDAO extends DBContext {
                 list.add(p);
             }
         } catch (SQLException e) {
-            System.out.println(e);
+            // Log error properly - could use logger here  
+            e.printStackTrace();
         }
         return list;
     }
@@ -720,7 +729,8 @@ public class ProductDAO extends DBContext {
                 + "      ,[releaseDate] =? \n"
                 + "      ,[Discount] =? \n"
                 + " WHERE [ProductID]=?";
-        System.out.println(sql);
+        // Debug SQL - could use logger here
+        // System.out.println(sql);
         try {
             PreparedStatement st = connection.prepareStatement(sql);
             st.setString(1, name);
@@ -757,8 +767,9 @@ public class ProductDAO extends DBContext {
         p.editProduct("tat", "", 1, "", 1, "10ml", "2019-10-10", 0, 1, 1, 1);
         List<Product> list = p.getAll();
         for (int i = 0; i < list.size(); i++) {
-            System.out.println(list.get(i).getName());
-            System.out.println(list.get(i).getImage()[0]);
+            // Debug output - could use logger here
+            // System.out.println(list.get(i).getName());
+            // System.out.println(list.get(i).getImage()[0]);
         }
     }
 }

@@ -33,7 +33,8 @@ public class UserDAO extends DBContext {
                 return u;
             }
         } catch (SQLException e) {
-            System.out.println(e);
+            // Log error properly - could use logger here
+            e.printStackTrace();
         }
         return null;
     }
@@ -80,7 +81,8 @@ public class UserDAO extends DBContext {
                 return true;
             }
         } catch (SQLException e) {
-            System.out.println(e);
+            // Log error properly - could use logger here
+            e.printStackTrace();
         }
         return false;
     }
@@ -97,7 +99,8 @@ public class UserDAO extends DBContext {
 
             st.executeUpdate();
         } catch (SQLException e) {
-            System.out.println(e);
+            // Log error properly - could use logger here
+            e.printStackTrace();
         }
     }
 
@@ -124,7 +127,8 @@ public class UserDAO extends DBContext {
 
             st.executeUpdate();
         } catch (SQLException e) {
-            System.out.println(e);
+            // Log error properly - could use logger here
+            e.printStackTrace();
         }
     }
 
@@ -142,7 +146,8 @@ public class UserDAO extends DBContext {
                 return u;
             }
         } catch (SQLException e) {
-            System.out.println(e);
+            // Log error properly - could use logger here
+            e.printStackTrace();
         }
         return null;
     }
@@ -189,7 +194,8 @@ public class UserDAO extends DBContext {
             st.setInt(10, 1);
             st.executeUpdate();
         } catch (SQLException e) {
-            System.out.println(e);
+            // Log error properly - could use logger here
+            e.printStackTrace();
         }
     }
 
@@ -252,7 +258,8 @@ public class UserDAO extends DBContext {
              2, "thanh@gmail.com", "2003-09-08", "4012412341");
         List<User> list = p.getAllUsers();
         for (int i = 0; i < list.size(); i++) {
-            System.out.println(list.get(i).getFullName());
+            // Debug output - could use logger here
+            // System.out.println(list.get(i).getFullName());
         }
     }
 
@@ -299,7 +306,8 @@ public class UserDAO extends DBContext {
             st.setString(2, s.getUserName());
             st.executeUpdate();
         } catch (SQLException e) {
-            System.out.println(e);
+            // Log error properly - could use logger here
+            e.printStackTrace();
         }
     }
 
@@ -330,7 +338,8 @@ public class UserDAO extends DBContext {
                 return name;
             }
         } catch (SQLException e) {
-            System.out.println(e);
+            // Log error properly - could use logger here
+            e.printStackTrace();
         }
         return null;
     }
