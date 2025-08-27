@@ -8,6 +8,7 @@ package perfumeshop.controller.admin.management.order;
 import perfumeshop.dal.OrderDAO;
 import perfumeshop.dal.UserDAO;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -40,9 +41,27 @@ public class InvoiceServlet extends HttpServlet {
       
         
 
-        double sumAllInvoice = dao.getTotalSumAllOrders();
+        // Get total sum and all orders with fallback methods
+        double sumAllInvoice = 0.0;
+        List<Order> listAllInvoice = new ArrayList<>();
         
-        List<Order> listAllInvoice = dao.getAllOrders();
+        try {
+            // Try new methods first
+            sumAllInvoice = dao.getTotalSumAllOrders();
+            listAllInvoice = dao.getAllOrders();
+        } catch (Exception e1) {
+            try {
+                // Fallback to old method names
+                sumAllInvoice = dao.sumAllMoneyOrder();
+                listAllInvoice = dao.getAll();
+            } catch (Exception e2) {
+                System.err.println("Error calling DAO methods: " + e2.getMessage());
+                e2.printStackTrace();
+                // Set default values
+                sumAllInvoice = 0.0;
+                listAllInvoice = new ArrayList<>();
+            }
+        }
         List<User> listAllAccount = dao2.getAllUsers();
         
         request.setAttribute("listAllInvoice", listAllInvoice);

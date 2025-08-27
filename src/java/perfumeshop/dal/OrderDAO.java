@@ -379,4 +379,13 @@ public class OrderDAO extends DBContext {
             throw new DaoException("Failed to update order status", "update", "order_status", e);
         }
     }
+
+    // Simple fallback methods for compatibility
+    public double sumAllMoneyOrder() {
+        return getTotalSumAllOrders();
+    }
+
+    public List<Order> getAll() {
+        return getAllOrders();
+    }
 }
