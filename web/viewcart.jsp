@@ -284,12 +284,28 @@
                                             $${sessionScope.cart == null || sessionScope.cartSize == 0 ? '0' : sessionScope.cart.getTotalMoney() + 3}
                                         </h6>
                                     </div>
-                                    <span>
-                                        <form action="viewcart" method="post">
-                                            <input class="btn-block btn-blue" type="submit" value="CHECKOUT" id="checkout"
-                                                   style="color: white; font-weight: bold; background-color: orange"/>
-                                        </form>
-                                    </span>
+                                    <div class="row" style="margin-top: 20px;">
+                                        <div class="col-md-6">
+                                            <form action="viewcart" method="post">
+                                                <input class="btn-block btn-blue" type="submit" value="Thanh toán bằng Ví Shop"
+                                                       style="color: white; font-weight: bold; background-color: #28a745; margin-bottom: 10px;"/>
+                                            </form>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <form action="vnpay_payment" method="get">
+                                                <button class="btn-block btn-blue" type="submit"
+                                                        style="color: white; font-weight: bold; background: linear-gradient(45deg, #ff6b6b, #ffa500); border: none; padding: 8px 15px; border-radius: 5px;">
+                                                    <i class="fa fa-mobile"></i> Thanh toán VNPay
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                    <div style="text-align: center; margin-top: 15px;">
+                                        <small style="color: #666;">
+                                            <i class="fa fa-info-circle"></i>
+                                            VNPay: Thanh toán nhanh chóng và an toàn qua ví điện tử
+                                        </small>
+                                    </div>
                                 </div>
                             </div>
                         </div>
