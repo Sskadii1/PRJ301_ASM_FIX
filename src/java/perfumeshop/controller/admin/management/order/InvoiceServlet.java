@@ -40,9 +40,9 @@ public class InvoiceServlet extends HttpServlet {
       
         
 
-        double sumAllInvoice = dao.sumAllMoneyOrder();
+        double sumAllInvoice = dao.getTotalSumAllOrders();
         
-        List<Order> listAllInvoice = dao.getAll();
+        List<Order> listAllInvoice = dao.getAllOrders();
         List<User> listAllAccount = dao2.getAllUsers();
         
         request.setAttribute("listAllInvoice", listAllInvoice);
