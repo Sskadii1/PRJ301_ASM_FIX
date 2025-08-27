@@ -276,7 +276,7 @@ public class ViewCartServlet extends HttpServlet {
     }
 
     /**
-     * Process the order
+     * Process the order with improved transaction handling
      */
     private void processOrder(Cart cart, User user, Wallet wallet, HttpSession session,
                             HttpServletRequest request, HttpServletResponse response)
@@ -290,52 +290,94 @@ public class ViewCartServlet extends HttpServlet {
         LOGGER.log(Level.INFO, "Processing order for user {0}, amount: {1}",
                   new Object[]{user.getUserName(), totalAmount});
 
-        // Get order count before
-        int ordersBefore = orderDAO.getNumberOrders();
+        // Use synchronized block to prevent race conditions
+        synchronized (this) {
+            try {
+                // Double-check balance before processing
+                Wallet currentWallet = walletDAO.getWalletByUserName(user.getUserName());
+                if (currentWallet == null) {
+                    throw new PaymentException("Wallet not found during order processing",
+                                             PaymentException.PaymentErrorCode.GATEWAY_ERROR);
+                }
 
-        // Create order
-        orderDAO.addOrder(user, cart);
+                if (currentWallet.getBalance() < totalAmount) {
+                    throw new PaymentException("Insufficient balance during order processing",
+                                             PaymentException.PaymentErrorCode.INSUFFICIENT_BALANCE);
+                }
 
-        // Get order count after
-        int ordersAfter = orderDAO.getNumberOrders();
+                // Create order
+                orderDAO.addOrder(user, cart);
 
-        if (ordersBefore < ordersAfter) {
-            // Order successful
-            handleSuccessfulOrder(cart, user, wallet, walletDAO, totalAmount, session, request, response);
-        } else {
-            // Order failed
-            throw new DaoException("Order creation failed", "create", "order");
+                // Order successful - proceed with post-processing
+                handleSuccessfulOrder(cart, user, currentWallet, walletDAO, totalAmount, session, request, response);
+
+            } catch (Exception e) {
+                LOGGER.log(Level.SEVERE, "Order processing failed for user: " + user.getUserName(), e);
+                throw new DaoException("Order creation failed: " + e.getMessage(), "create", "order", e);
+            }
         }
     }
 
     /**
-     * Handle successful order processing
+     * Handle successful order processing with improved error handling
      */
     private void handleSuccessfulOrder(Cart cart, User user, Wallet wallet, WalletDAO walletDAO,
                                      double totalAmount, HttpSession session, HttpServletRequest request,
                                      HttpServletResponse response) throws ServletException, IOException {
 
+        LocalDateTime currentDateTime = LocalDateTime.now();
+        boolean emailSent = false;
+        boolean walletUpdated = false;
+
         try {
-            // Send confirmation email
-            sendOrderConfirmationEmail(user, totalAmount);
+            // Send confirmation email (non-critical operation)
+            try {
+                sendOrderConfirmationEmail(user, totalAmount);
+                emailSent = true;
+                LOGGER.log(Level.INFO, "Confirmation email sent to: {0}", user.getEmail());
+            } catch (Exception emailEx) {
+                LOGGER.log(Level.WARNING, "Failed to send confirmation email to: " + user.getEmail(), emailEx);
+                // Don't fail the whole operation for email issues
+            }
 
-            // Update wallet
-            walletDAO.decuctionMoney(user.getUserName(), totalAmount);
+            // Update wallet balance (critical operation)
+            walletDAO.deductionMoney(user.getUserName(), totalAmount);
             wallet = walletDAO.getWalletByUserName(user.getUserName());
-            session.setAttribute(ATTR_WALLET, wallet);
+            if (wallet != null) {
+                session.setAttribute(ATTR_WALLET, wallet);
+                walletUpdated = true;
+                LOGGER.log(Level.INFO, "Wallet updated successfully for user: {0}", user.getUserName());
+            }
 
-            // Clear cart
+            // Clear cart (critical operation)
             session.removeAttribute(ATTR_CART);
             session.removeAttribute(ATTR_LIST_ITEMS);
             session.setAttribute(ATTR_CART_SIZE, 0);
 
             LOGGER.log(Level.INFO, "Order completed successfully for user: {0}", user.getUserName());
 
-            setSuccessAttributes(request, MSG_ORDER_SUCCESS, null);
+            // Set success message with details
+            String successMessage = MSG_ORDER_SUCCESS;
+            if (!emailSent) {
+                successMessage += " (Lưu ý: Không thể gửi email xác nhận)";
+            }
+            setSuccessAttributes(request, successMessage, null);
 
         } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error in post-order processing", e);
-            throw new DaoException("Error in post-order processing", "update", "post_order", e);
+            LOGGER.log(Level.SEVERE, "Error in post-order processing for user: " + user.getUserName(), e);
+
+            // Try to rollback if wallet was updated but cart clearing failed
+            if (walletUpdated && (session.getAttribute(ATTR_CART) != null)) {
+                LOGGER.log(Level.WARNING, "Attempting to rollback wallet update due to cart clearing failure");
+                try {
+                    walletDAO.inputMoney(user.getUserName(), totalAmount);
+                    LOGGER.log(Level.INFO, "Wallet rollback successful for user: {0}", user.getUserName());
+                } catch (Exception rollbackEx) {
+                    LOGGER.log(Level.SEVERE, "Wallet rollback failed for user: " + user.getUserName(), rollbackEx);
+                }
+            }
+
+            throw new DaoException("Error in post-order processing: " + e.getMessage(), "update", "post_order", e);
         }
     }
 

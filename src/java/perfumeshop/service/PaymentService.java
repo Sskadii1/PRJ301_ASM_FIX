@@ -5,6 +5,9 @@ import perfumeshop.exception.ValidationException;
 import perfumeshop.model.Cart;
 import perfumeshop.model.User;
 import perfumeshop.model.Wallet;
+import perfumeshop.model.Item;
+import perfumeshop.model.Product;
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -124,8 +127,188 @@ public class PaymentService {
             throw new ValidationException("Payment amount must be positive", "amount");
         }
 
-        if (amount > 10000) { // Arbitrary limit for demo
-            throw new ValidationException("Payment amount exceeds maximum limit", "amount");
+        if (amount > 10000) { // Maximum order limit
+            throw new ValidationException("Payment amount exceeds maximum limit of $10,000", "amount");
+        }
+
+        // Check for reasonable minimum amount (avoid microtransactions)
+        if (amount < 1.0) {
+            throw new ValidationException("Payment amount must be at least $1.00", "amount");
+        }
+
+        // Check for potential floating point precision issues
+        if (Double.isNaN(amount) || Double.isInfinite(amount)) {
+            throw new ValidationException("Invalid payment amount", "amount");
+        }
+    }
+
+    /**
+     * Validate cart contents for payment
+     * @param cart Shopping cart to validate
+     * @throws ValidationException if cart is invalid for payment
+     */
+    public void validateCartForPayment(perfumeshop.model.Cart cart) {
+        if (cart == null) {
+            throw new ValidationException("Cart cannot be null", "cart");
+        }
+
+        if (cart.isEmpty()) {
+            throw new ValidationException("Cannot process payment for empty cart", "cart");
+        }
+
+        // Validate each item in cart
+        List<perfumeshop.model.Item> items = cart.getListItems();
+        if (items == null) {
+            throw new ValidationException("Cart items list is null", "cart");
+        }
+
+        for (perfumeshop.model.Item item : items) {
+            if (item == null) {
+                throw new ValidationException("Cart contains null item", "cart");
+            }
+
+            if (item.getProduct() == null) {
+                throw new ValidationException("Cart item has no product information", "cart");
+            }
+
+            if (item.getQuantity() <= 0) {
+                throw new ValidationException("Cart item has invalid quantity: " + item.getQuantity(), "cart");
+            }
+
+            if (item.getProduct().getPrice() <= 0) {
+                throw new ValidationException("Product has invalid price: " + item.getProduct().getPrice(), "cart");
+            }
+
+            // Check for maximum quantity per item
+            if (item.getQuantity() > 100) {
+                throw new ValidationException("Maximum quantity per item is 100", "cart");
+            }
+        }
+
+        // Validate total calculations
+        double calculatedTotal = cart.getFinalTotal();
+        validatePaymentAmount(calculatedTotal);
+
+        LOGGER.log(Level.INFO, "Cart validation passed - items: {0}, total: {1}",
+                  new Object[]{items.size(), calculatedTotal});
+    }
+
+    /**
+     * Validate user information for payment
+     * @param user User to validate
+     * @throws ValidationException if user information is invalid
+     */
+    public void validateUserForPayment(perfumeshop.model.User user) {
+        if (user == null) {
+            throw new ValidationException("User cannot be null", "user");
+        }
+
+        if (user.getUserName() == null || user.getUserName().trim().isEmpty()) {
+            throw new ValidationException("Username cannot be null or empty", "userName");
+        }
+
+        if (user.getEmail() == null || user.getEmail().trim().isEmpty()) {
+            throw new ValidationException("Email cannot be null or empty", "email");
+        }
+
+        // Basic email validation
+        if (!user.getEmail().contains("@") || !user.getEmail().contains(".")) {
+            throw new ValidationException("Invalid email format", "email");
+        }
+
+        // Validate email length
+        if (user.getEmail().length() > 254) {
+            throw new ValidationException("Email address is too long", "email");
+        }
+
+        // Validate username length and format
+        if (user.getUserName().length() < 3 || user.getUserName().length() > 50) {
+            throw new ValidationException("Username must be between 3 and 50 characters", "userName");
+        }
+
+        LOGGER.log(Level.INFO, "User validation passed for: {0}", user.getUserName());
+    }
+
+    /**
+     * Validate wallet for payment
+     * @param wallet Wallet to validate
+     * @param requiredAmount Required amount for payment
+     * @throws ValidationException if wallet is invalid
+     */
+    public void validateWalletForPayment(perfumeshop.model.Wallet wallet, double requiredAmount) {
+        if (wallet == null) {
+            throw new ValidationException("Wallet cannot be null", "wallet");
+        }
+
+        if (wallet.getUserName() == null || wallet.getUserName().trim().isEmpty()) {
+            throw new ValidationException("Wallet has no associated username", "wallet");
+        }
+
+        double balance = wallet.getBalance();
+
+        // Validate balance is not negative
+        if (balance < 0) {
+            throw new ValidationException("Wallet balance cannot be negative", "wallet");
+        }
+
+        // Validate balance is not too high (prevent potential fraud)
+        if (balance > 50000) {
+            throw new ValidationException("Wallet balance exceeds maximum allowed amount", "wallet");
+        }
+
+        // Validate sufficient funds
+        if (balance < requiredAmount) {
+            throw new ValidationException(
+                String.format("Insufficient funds. Required: $%.2f, Available: $%.2f",
+                             requiredAmount, balance),
+                "wallet");
+        }
+
+        // Check for potential precision issues
+        if (Double.isNaN(balance) || Double.isInfinite(balance)) {
+            throw new ValidationException("Invalid wallet balance", "wallet");
+        }
+
+        LOGGER.log(Level.INFO, "Wallet validation passed - balance: {0}, required: {1}",
+                  new Object[]{balance, requiredAmount});
+    }
+
+    /**
+     * Comprehensive payment validation
+     * @param user Customer
+     * @param cart Shopping cart
+     * @param wallet Customer wallet
+     * @throws ValidationException if any validation fails
+     */
+    public void validateCompletePayment(perfumeshop.model.User user, perfumeshop.model.Cart cart,
+                                      perfumeshop.model.Wallet wallet) {
+        try {
+            // Validate user first
+            validateUserForPayment(user);
+
+            // Validate cart
+            validateCartForPayment(cart);
+
+            // Validate wallet
+            double requiredAmount = cart.getFinalTotal();
+            validateWalletForPayment(wallet, requiredAmount);
+
+            // Cross-validation: ensure wallet belongs to user
+            if (!user.getUserName().equals(wallet.getUserName())) {
+                throw new ValidationException("Wallet does not belong to user", "wallet");
+            }
+
+            LOGGER.log(Level.INFO, "Complete payment validation passed for user: {0}",
+                      user.getUserName());
+
+        } catch (ValidationException e) {
+            // Add context to validation errors
+            throw new ValidationException(
+                String.format("Payment validation failed: %s", e.getMessage()),
+                e.getField());
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Unexpected error during payment validation", e);
+            throw new ValidationException("Unexpected error during payment validation", "system");
         }
     }
 

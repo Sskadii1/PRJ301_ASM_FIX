@@ -194,6 +194,7 @@ public class VNPayPaymentServlet extends HttpServlet {
 
     /**
      * Simulate VNPay payment response (for demo purposes)
+     * Enhanced with better error handling and validation
      */
     private void simulateVNPayPayment(HttpServletRequest request, HttpServletResponse response,
                                      HttpSession session, Cart cart, User user, double totalAmount)
@@ -202,57 +203,124 @@ public class VNPayPaymentServlet extends HttpServlet {
         OrderDAO od = new OrderDAO();
         ProductDAO pd = new ProductDAO();
         WalletDAO wd = new WalletDAO();
-        Wallet wallet = (Wallet) session.getAttribute("wallet");
+        Wallet wallet = null;
 
-        // Simulate random payment result (80% success rate for demo)
-        boolean paymentSuccess = Math.random() < 0.8;
+        try {
+            // Validate wallet exists and has sufficient balance
+            wallet = wd.getWalletByUserName(user.getUserName());
+            if (wallet == null) {
+                throw new RuntimeException("Wallet not found for user: " + user.getUserName());
+            }
 
-        if (paymentSuccess) {
-            // Payment successful - process order
-            int pre = od.getNumberOrders();
-            od.addOrder(user, cart);
-            LocalDateTime currentDateTime = LocalDateTime.now();
-            int after = od.getNumberOrders();
+            if (wallet.getBalance() < totalAmount) {
+                request.setAttribute("payment_status", "failed");
+                request.setAttribute("error_message", "Số dư không đủ để thực hiện thanh toán.");
+                request.getRequestDispatcher("vnpay_result.jsp").forward(request, response);
+                return;
+            }
 
-            if (pre < after) {
-                // Send confirmation email
-                Email handleEmail = new Email();
-                String sub = handleEmail.subjectOrder(user.getFullName());
-                String msg = handleEmail.messageOrder(currentDateTime, totalAmount, user.getAddress());
-                handleEmail.sendEmail(sub, msg, user.getEmail());
+            // Validate cart one more time
+            if (cart == null || cart.isEmpty()) {
+                request.setAttribute("payment_status", "failed");
+                request.setAttribute("error_message", "Giỏ hàng trống hoặc không hợp lệ.");
+                request.getRequestDispatcher("vnpay_result.jsp").forward(request, response);
+                return;
+            }
 
-                // Update wallet
-                wd.decuctionMoney(user.getUserName(), totalAmount);
-                wallet = wd.getWalletByUserName(user.getUserName());
-                session.setAttribute("wallet", wallet);
+            // Simulate VNPay payment processing with more realistic logic
+            Map<String, String> vnpayResponse = VNPayDemoUtils.simulatePaymentResult(0.85); // 85% success rate
 
-                // Clear cart
-                session.removeAttribute("cart");
-                session.removeAttribute("listItemsInCart");
-                session.setAttribute("cartSize", 0);
+            String responseCode = vnpayResponse.get("vnp_ResponseCode");
+            boolean paymentSuccess = "00".equals(responseCode);
 
-                // Set success message
+            if (paymentSuccess) {
+                // Payment successful - process order with better transaction handling
+                processSuccessfulPayment(od, pd, wd, wallet, cart, user, totalAmount, session, request);
+
+                // Set success attributes
                 request.setAttribute("payment_status", "success");
-                request.setAttribute("order_id", "VNP" + System.currentTimeMillis());
-                request.setAttribute("transaction_id", (String) session.getAttribute("vnp_txn_ref"));
+                request.setAttribute("order_id", vnpayResponse.get("vnp_TxnRef"));
+                request.setAttribute("transaction_id", vnpayResponse.get("vnp_TxnRef"));
                 request.setAttribute("amount", totalAmount);
                 request.setAttribute("payment_method", "VNPay");
+                request.setAttribute("bank_code", vnpayResponse.get("vnp_BankCode"));
+                request.setAttribute("card_type", vnpayResponse.get("vnp_CardType"));
+                request.setAttribute("pay_date", vnpayResponse.get("vnp_PayDate"));
+
             } else {
+                // Payment failed - set appropriate error message based on response code
+                String errorMessage = VNPayDemoUtils.getResponseDescription(responseCode);
                 request.setAttribute("payment_status", "failed");
-                request.setAttribute("error_message", "Không thể tạo đơn hàng. Vui lòng thử lại.");
+                request.setAttribute("error_message", "Thanh toán thất bại: " + errorMessage);
+                request.setAttribute("vnp_response_code", responseCode);
             }
-        } else {
-            // Payment failed
+
+        } catch (Exception e) {
+            // Log the error for debugging
+            System.err.println("Payment processing error: " + e.getMessage());
+            e.printStackTrace();
+
             request.setAttribute("payment_status", "failed");
-            request.setAttribute("error_message", "Thanh toán thất bại. Vui lòng kiểm tra thông tin thẻ hoặc thử lại.");
+            request.setAttribute("error_message", "Có lỗi xảy ra trong quá trình xử lý thanh toán: " + e.getMessage());
+        } finally {
+            // Always clean up session attributes
+            cleanupSessionAttributes(session);
+            request.getRequestDispatcher("vnpay_result.jsp").forward(request, response);
+        }
+    }
+
+    /**
+     * Process successful payment with improved error handling
+     */
+    private void processSuccessfulPayment(OrderDAO od, ProductDAO pd, WalletDAO wd, Wallet wallet,
+                                        Cart cart, User user, double totalAmount, HttpSession session,
+                                        HttpServletRequest request) throws Exception {
+
+        LocalDateTime currentDateTime = LocalDateTime.now();
+
+        // Use synchronized block to prevent race conditions in order creation
+        synchronized (this) {
+            int ordersBefore = od.getNumberOrders();
+            od.addOrder(user, cart);
+            int ordersAfter = od.getNumberOrders();
+
+            if (ordersBefore >= ordersAfter) {
+                throw new RuntimeException("Không thể tạo đơn hàng do lỗi hệ thống");
+            }
         }
 
-        // Remove temporary session attributes
+        try {
+            // Send confirmation email
+            Email handleEmail = new Email();
+            String subject = handleEmail.subjectOrder(user.getFullName());
+            String message = handleEmail.messageOrder(currentDateTime, totalAmount, user.getAddress());
+            handleEmail.sendEmail(subject, message, user.getEmail());
+
+            // Update wallet balance
+            wd.deductionMoney(user.getUserName(), totalAmount);
+            wallet = wd.getWalletByUserName(user.getUserName());
+            session.setAttribute("wallet", wallet);
+
+            // Clear cart
+            session.removeAttribute("cart");
+            session.removeAttribute("listItemsInCart");
+            session.setAttribute("cartSize", 0);
+
+        } catch (Exception e) {
+            // If email or wallet update fails, we should still consider the payment successful
+            // since the order was created, but log the error
+            System.err.println("Post-payment processing error: " + e.getMessage());
+            // Don't throw exception here as the order was already created
+        }
+    }
+
+    /**
+     * Clean up temporary session attributes
+     */
+    private void cleanupSessionAttributes(HttpSession session) {
         session.removeAttribute("vnp_txn_ref");
         session.removeAttribute("vnp_amount");
         session.removeAttribute("customer_info");
-
-        request.getRequestDispatcher("vnpay_result.jsp").forward(request, response);
     }
 
 

@@ -94,8 +94,8 @@ public class WalletDAO extends DBContext {
         }
     }
     
-    // 
-    public void decuctionMoney(String userName, double value ){
+    //
+    public void deductionMoney(String userName, double value) {
         try {
             String sql = "UPDATE [dbo].[Wallets] SET [Balance] = (Balance - ?) WHERE UserName = ?";
             PreparedStatement st = connection.prepareStatement(sql);
