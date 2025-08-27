@@ -44,6 +44,11 @@ public class Order {
         return orderId;
     }
 
+    // Alias method for backward compatibility
+    public int getId() {
+        return getOrderId();
+    }
+
     public void setOrderId(int orderId) {
         if (orderId <= 0) {
             throw new IllegalArgumentException("Order ID must be positive");

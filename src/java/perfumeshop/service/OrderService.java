@@ -166,7 +166,7 @@ public class OrderService {
             // but that's not efficient for production
             List<Order> allOrders = orderDAO.getAllOrders();
             for (Order order : allOrders) {
-                if (order.getId() == orderId) {
+                if (order.getOrderId() == orderId) {
                     LOGGER.log(Level.INFO, "Order found: {0}", orderId);
                     return order;
                 }
