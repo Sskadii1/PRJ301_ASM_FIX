@@ -39,7 +39,7 @@ public class UserDAO extends DBContext {
     }
 
     public int checkAccountAdmin(String userName) {
-        String sql = "select  from Users where [userName]=? and [status] = 1";
+        String sql = "select roleID from Users where [userName]=? and [status] = 1";
         try {
             PreparedStatement st = connection.prepareStatement(sql);
             st.setString(1, userName);
